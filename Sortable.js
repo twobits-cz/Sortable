@@ -9,7 +9,7 @@
 	"use strict";
 
 	if( typeof define === "function" && define.amd ){
-		define(factory);
+		define("Sortable", [], factory);
 	}
 	else {
 		window["Sortable"] = factory();
@@ -74,11 +74,10 @@
 		options.onRemove = _bind(this, options.onRemove || noop);
 
 
-		// Export group name
 		el[expando] = options.group;
 
 
-		// Bind all private methods
+		// Bind all prevate methods
 		for( var fn in this ){
 			if( fn.charAt(0) === '_' ){
 				this[fn] = _bind(this, this[fn]);
@@ -110,7 +109,7 @@
 		},
 
 
-		_onTapStart: function (evt/**Event|TouchEvent*/){
+		_onTapStart: function (evt/**TouchEvent*/){
 			var
 				  touch = evt.touches && evt.touches[0]
 				, target = (touch || evt).target
@@ -196,7 +195,7 @@
 		},
 
 
-		_onTouchMove: function (evt/**TouchEvent*/){
+		_onTouchMove: function (evt){
 			if( tapEvt ){
 				var
 					  touch = evt.touches[0]
@@ -210,7 +209,7 @@
 		},
 
 
-		_onDragStart: function (evt/**Event*/, isTouch/**Boolean*/){
+		_onDragStart: function (evt/**Event*/, isTouch){
 			var
 				  target = evt.target
 				, dataTransfer = evt.dataTransfer
@@ -262,14 +261,14 @@
 		},
 
 
-		_onDragOver: function (evt/**Event*/){
+		_onDragOver: function (evt){
 			if( !_silent && (activeGroup === this.options.group) && (evt.rootEl === void 0 || evt.rootEl === this.el) ){
 				var
 					  el = this.el
 					, target = _closest(evt.target, this.options.draggable, el)
 				;
 
-				if( el.children.length === 0 || el.children[0] === ghostEl ){
+				if( el.children.length === 0 || el.children[0] === ghostEl || _checkExpandoEqual(target, dragEl.parentNode)){
 					el.appendChild(dragEl);
 				}
 				else if( target && target !== dragEl && (target.parentNode[expando] !== void 0) ){
@@ -297,13 +296,19 @@
 					if( floating ){
 						after = (target.previousElementSibling === dragEl) && !isWide || (skew > .5) && isWide
 					} else {
-						after = (target.nextElementSibling !== dragEl) && !isLong || (skew > .5) && isLong;
+						after = false ;
+						// TH FIX
+						// (target.nextElementSibling !== dragEl) && !isLong || (skew > .5) && isLong;
 					}
 
 					if( after && !nextSibling ){
 						el.appendChild(dragEl);
 					} else {
-						target.parentNode.insertBefore(dragEl, after ? nextSibling : target);
+						try {
+							target.parentNode.insertBefore(dragEl, after ? nextSibling : target);
+						} catch (e) {
+							// thrown when you try to put node into nasted group
+						}
 					}
 				}
 			}
@@ -489,6 +494,14 @@
 		_silent = false;
 	}
 
+	function _checkExpandoEqual(elm1, elm2 ) {
+		return typeof elm1 == "object"
+			&& elm1 != null
+			&& typeof elm2 == "object"
+			&& elm2 != null
+			&& typeof elm1[expando] == "string"
+			&& elm1[expando] === elm2[expando];
+	};
 
 
 	// Export utils
@@ -499,7 +512,8 @@
 		find: _find,
 		bind: _bind,
 		closest: _closest,
-		toggleClass: _toggleClass
+		toggleClass: _toggleClass,
+		checkExpandoEqual: _checkExpandoEqual
 	};
 
 
