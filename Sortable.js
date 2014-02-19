@@ -146,6 +146,7 @@
 
 
 				_on(this.el, 'dragstart', this._onDragStart);
+				_on(this.el, 'dragstart', options.onStart);
 				_on(this.el, 'dragend', this._onDrop);
 
 				_on(document, 'dragover', _globalDragOver);
@@ -316,6 +317,9 @@
 
 
 		_onDrop: function (evt/**Event*/){
+			if (this.options.onEnd) {
+				this.options.onEnd(evt);
+			}		
 			clearInterval(this._loopId);
 
 			// Unbind events
@@ -324,6 +328,9 @@
 
 			_off(this.el, 'dragend', this._onDrop);
 			_off(this.el, 'dragstart', this._onDragStart);
+			_off(this.el, 'dragstart', this.options.onStart);
+			_off(this.el, 'dragend', this.options.onDragEnd);
+
 
 			_off(document, 'touchmove', this._onTouchMove);
 			_off(document, 'touchend', this._onDrop);
