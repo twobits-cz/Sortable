@@ -3,6 +3,7 @@
   "main": "Sortable.js",
   "version": "0.1.9",
   "homepage": "http://rubaxa.github.io/Sortable/",
+  "repo": "RubaXa/Sortable",
   "authors": [
     "RubaXa <ibnRubaXa@gmail.com>"
   ],
@@ -23,5 +24,9 @@
     "bower_components",
     "test",
     "tests"
+  ],
+  
+  "scripts": [
+    "Sortable.js"
   ]
 }

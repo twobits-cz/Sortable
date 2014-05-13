@@ -11,6 +11,9 @@
 	if( typeof define === "function" && define.amd ){
 		define("Sortable", [], factory);
 	}
+	else if( typeof module != "undefined" && typeof module.exports != "undefined" ){
+		module.exports = factory();
+	}
 	else {
 		window["Sortable"] = factory();
 	}
@@ -25,6 +28,7 @@
 
 		, lastEl
 		, lastCSS
+		, lastRect
 
 		, activeGroup
 
@@ -36,6 +40,8 @@
 		, win = window
 		, document = win.document
 		, parseInt = win.parseInt
+		, supportIEdnd = !!document.createElement('div').dragDrop
+
 		, _silent = false
 
 		, _createEvent = function (event/**String*/, item/**HTMLElement*/){
@@ -66,7 +72,7 @@
 		// Defaults
 		options.group = options.group || Math.random();
 		options.handle = options.handle || null;
-		options.draggable = options.draggable || el.children[0] && el.children[0].nodeName || 'li';
+		options.draggable = options.draggable || el.children[0] && el.children[0].nodeName || (/[uo]l/i.test(el.nodeName) ? 'li' : '*');
 		options.ghostClass = options.ghostClass || 'sortable-ghost';
 
 		options.onAdd = _bind(this, options.onAdd || noop);
@@ -92,6 +98,7 @@
 
 		_on(el, 'mousedown', this._onTapStart);
 		_on(el, 'touchstart', this._onTapStart);
+		supportIEdnd && _on(el, 'selectstart', this._onTapStart);
 
 		_on(el, 'dragover', this._onDragOver);
 		_on(el, 'dragenter', this._onDragOver);
@@ -123,6 +130,13 @@
 
 			target = _closest(target, options.draggable, el);
 
+			// IE 9 Support
+			if( target && evt.type == 'selectstart' ){
+				if( target.tagName != 'A' && target.tagName != 'IMG'){
+					target.dragDrop();
+				}
+			}
+
 			if( target && !dragEl && (target.parentNode === el) ){
 				tapEvt = evt;
 				target.draggable = true;
@@ -148,7 +162,6 @@
 				_on(this.el, 'dragstart', this._onDragStart);
 				_on(this.el, 'dragstart', options.onStart);
 				_on(this.el, 'dragend', this._onDrop);
-
 				_on(document, 'dragover', _globalDragOver);
 
 
@@ -174,22 +187,24 @@
 					, i = touchDragOverListeners.length
 				;
 
-				do {
-					if( parent[expando] === group ){
-						while( i-- ){
-							touchDragOverListeners[i]({
-								clientX: touchEvt.clientX,
-								clientY: touchEvt.clientY,
-								target: target,
-								rootEl: parent
-							});
+				if( parent ){
+					do {
+						if( parent[expando] === group ){
+							while( i-- ){
+								touchDragOverListeners[i]({
+									clientX: touchEvt.clientX,
+									clientY: touchEvt.clientY,
+									target: target,
+									rootEl: parent
+								});
+							}
+							break;
 						}
-						break;
-					}
 
-					target = parent; // store last element
+						target = parent; // store last element
+					}
+					while( parent = parent.parentNode );
 				}
-				while( parent = parent.parentNode );
 
 				_css(ghostEl, 'display', '');
 			}
@@ -269,18 +284,19 @@
 					, target = _closest(evt.target, this.options.draggable, el)
 				;
 
-				if( el.children.length === 0 || el.children[0] === ghostEl || _checkExpandoEqual(target, dragEl.parentNode)){
+				if( el.children.length === 0 || el.children[0] === ghostEl || _checkExpandoEqual(target, dragEl.parentNode) || (el === evt.target) && _ghostInBottom(el, evt) ){
 					el.appendChild(dragEl);
 				}
 				else if( target && target !== dragEl && (target.parentNode[expando] !== void 0) ){
 					if( lastEl !== target ){
 						lastEl = target;
-						lastCSS = _css(target)
+						lastCSS = _css(target);
+						lastRect = target.getBoundingClientRect();
 					}
 
 
 					var
-						  rect = target.getBoundingClientRect()
+						  rect = lastRect
 						, width = rect.right - rect.left
 						, height = rect.bottom - rect.top
 						, floating = /left|right|inline/.test(lastCSS.cssFloat + lastCSS.display)
@@ -328,7 +344,7 @@
 
 			_off(this.el, 'dragend', this._onDrop);
 			_off(this.el, 'dragstart', this._onDragStart);
-			_off(this.el, 'dragstart', this.options.onStart);
+			_off(this.el, 'selectstart', this._onTapStart);
 			_off(this.el, 'dragend', this.options.onDragEnd);
 
 
@@ -345,6 +361,7 @@
 				}
 
 				if( dragEl ){
+					_disableDraggable(dragEl);
 					_toggleClass(dragEl, this.options.ghostClass, false);
 
 					if( !rootEl.contains(dragEl) ){
@@ -386,9 +403,15 @@
 
 			_off(el, 'mousedown', this._onTapStart);
 			_off(el, 'touchstart', this._onTapStart);
+			_off(el, 'selectstart', this._onTapStart);
 
 			_off(el, 'dragover', this._onDragOver);
 			_off(el, 'dragenter', this._onDragOver);
+
+			//remove draggable attributes
+			Array.prototype.forEach.call(el.querySelectorAll('[draggable]'), function(el) {
+				el.removeAttribute('draggable');
+			});
 
 			touchDragOverListeners.splice(touchDragOverListeners.indexOf(this._onDragOver), 1);
 
@@ -408,19 +431,29 @@
 
 
 	function _closest(el, selector, ctx){
-		if( el ){
+		if( selector === '*' ){
+			return el;
+		}
+		else if( el ){
 			ctx = ctx || document;
 			selector = selector.split('.');
 
 			var
 				  tag = selector.shift().toUpperCase()
 				, re = new RegExp('\\s('+selector.join('|')+')\\s', 'g')
+				, className
 			;
 
 			do {
+				className = el.className;
+
+				if (className && className.baseVal) { // SVG
+					className = className.baseVal;
+				}
+
 				if(
 					   (tag === '' || el.nodeName == tag)
-					&& (!selector.length || ((' '+el.className+' ').match(re) || []).length == selector.length)
+					&& (!selector.length || ((' '+className+' ').match(re) || []).length == selector.length)
 				){
 					return	el;
 				}
@@ -501,6 +534,12 @@
 		_silent = false;
 	}
 
+
+	function _ghostInBottom(el, evt){
+		var last = el.lastElementChild.getBoundingClientRect();
+		return evt.clientY - (last.top + last.height) > 5; // min delta
+	}
+
 	function _checkExpandoEqual(elm1, elm2 ) {
 		return typeof elm1 == "object"
 			&& elm1 != null
@@ -524,7 +563,7 @@
 	};
 
 
-	Sortable.version = '0.1.5';
+	Sortable.version = '0.1.9';
 
 	// Export
 	return	Sortable;
