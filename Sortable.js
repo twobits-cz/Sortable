@@ -75,6 +75,8 @@
 		options.draggable = options.draggable || el.children[0] && el.children[0].nodeName || (/[uo]l/i.test(el.nodeName) ? 'li' : '*');
 		options.ghostClass = options.ghostClass || 'sortable-ghost';
 		options.ghostInBottom = options.ghostInBottom || 5;
+		options.scrollableContainer = options.scrollableContainer || null;
+		options.scrollableContainerArea = options.scrollableContainerArea || 60;
 
 		options.onAdd = _bind(this, options.onAdd || noop);
 		options.onUpdate = _bind(this, options.onUpdate || noop);
@@ -224,12 +226,11 @@
 			if( tapEvt ){
 				var
 					  touch = evt.touches[0]
-					, dx = touch.clientX - tapEvt.clientX
 					, dy = touch.clientY - tapEvt.clientY
 				;
 
 				touchEvt = touch;
-				_css(ghostEl, 'webkitTransform', 'translate3d('+dx+'px,'+dy+'px,0)');
+				_css(ghostEl, 'webkitTransform', 'translate3d(0,' + dy + 'px,0)');
 			}
 		},
 
@@ -252,6 +253,7 @@
 					, ghostRect
 				;
 
+				this._isTouch = true;
 				ghostEl = target.cloneNode(true);
 
 				_css(ghostEl, 'top', target.offsetTop - parseInt(css.marginTop, 10));
@@ -277,15 +279,16 @@
 				this._loopId = setInterval(this._emulateDragOver, 150);
 			}
 			else {
+				this._isTouch = false;
 				dataTransfer.effectAllowed = 'move';
 				dataTransfer.setData('Text', target.textContent);
 
 				_on(document, 'drop', this._onDrop);
 			}
 
+			this._scrollInterval = Date.now();
 			setTimeout(this._applyEffects);
 		},
-
 
 		_onDragOver: function (evt){
 			if( !_silent && (activeGroup === this.options.group) && (evt.rootEl === void 0 || evt.rootEl === this.el) ){
@@ -338,9 +341,55 @@
 						}
 					}
 				}
+
+				this._detectScroll(event);
 			}
 		},
 
+		_detectScroll: function (event){
+			if (!this.options.scrollableContainer) {
+				return;
+			}
+
+			if (Date.now() < this._scrollInterval + 250) {
+				return;
+			}
+			this._scrollInterval = Date.now();
+
+			var container = this.options.scrollableContainer,
+				scrollTopFrom = container.getBoundingClientRect().top + this.options.scrollableContainerArea, // holder's top position
+				scrollBottomFrom = container.getBoundingClientRect().top + container.clientHeight - this.options.scrollableContainerArea - 60; // must subtract trash height (60px)
+
+			if (this._isTouch) {
+				// Scroll to bottom
+				if (touchEvt.clientY > scrollBottomFrom) {
+					if (container.scrollHeight == container.scrollTop + container.clientHeight) {
+						return;
+					}
+					_scrollTo(container, 100, 200);
+					tapEvt.clientY -= 100;
+					_css(ghostEl, 'webkitTransform', 'translate3d(0,' + touchEvt.clientY - tapEvt.clientY + 'px,0)');
+
+				// Scroll to top
+				} else if (touchEvt.clientY < scrollTopFrom) {
+					if (container.scrollTop == 0) {
+						return;
+					}
+					_scrollTo(container, -100, 200);
+					tapEvt.clientY += 100;
+					_css(ghostEl, 'webkitTransform', 'translate3d(0,' + touchEvt.clientY - tapEvt.clientY + 'px,0)');
+				}
+			} else {
+				// Scroll to bottom
+				if (event.clientY > scrollBottomFrom) {
+					_scrollTo(container, 100, 200);
+
+				// Scroll to top
+				} else if (event.clientY < scrollTopFrom) {
+					_scrollTo(container, -100, 200);
+				}
+			}
+		},
 
 		_onDrop: function (evt/**Event*/){
 			if (this.options.onEnd) {
@@ -544,6 +593,27 @@
 
 	function _unsilent(){
 		_silent = false;
+	}
+
+	function _scrollTo(element, difference, duration) {
+		if (duration <= 0) {
+			return;
+		}
+		var stepDuration = 10,
+			steps = (duration / stepDuration),
+			stepChange = difference / steps;
+
+		_scrollToTick(element, steps, stepDuration, stepChange);
+	}
+
+	function _scrollToTick(element, steps, stepDuration, stepChange) {
+		if (steps == 0) {
+			return;
+		}
+		setTimeout(function() {
+			element.scrollTop += stepChange;
+			_scrollToTick(element, steps - 1, stepDuration, stepChange);
+		}, stepDuration);
 	}
 
 
