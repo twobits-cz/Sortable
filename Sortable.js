@@ -161,6 +161,7 @@
 
 				_on(this.el, 'dragstart', this._onDragStart);
 				_on(this.el, 'dragstart', this.options.onStart);
+				_on(this.el, 'mouseup', this._onDrop);
 				_on(this.el, 'dragend', this._onDrop);
 				_on(this.el, 'dragend', this.options.onEnd);
 				_on(document, 'dragover', _globalDragOver);
@@ -350,6 +351,7 @@
 			_off(document, 'drop', this._onDrop);
 			_off(document, 'dragover', _globalDragOver);
 
+			_off(this.el, 'mouseup', this._onDrop);
 			_off(this.el, 'dragend', this._onDrop);
 			_off(this.el, 'dragend', this.options.onEnd);
 			_off(this.el, 'dragstart', this._onDragStart);
