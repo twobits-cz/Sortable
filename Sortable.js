@@ -42,6 +42,7 @@
 		, parseInt = win.parseInt
 		, supportIEdnd = !!document.createElement('div').dragDrop
 
+		, _isTouch = !!('ontouchstart' in window)
 		, _silent = false
 
 		, _createEvent = function (event/**String*/, item/**HTMLElement*/){
@@ -224,13 +225,9 @@
 
 		_onTouchMove: function (evt){
 			if( tapEvt ){
-				var
-					  touch = evt.touches[0]
-					, dy = touch.clientY - tapEvt.clientY
-				;
-
+				var touch = evt.touches[0];
 				touchEvt = touch;
-				_css(ghostEl, 'webkitTransform', 'translate3d(0,' + dy + 'px,0)');
+				_css(ghostEl, 'webkitTransform', 'translate3d('+(touch.clientX-tapEvt.clientX)+'px,'+(touch.clientY-tapEvt.clientY)+'px,0)');
 			}
 		},
 
@@ -253,7 +250,6 @@
 					, ghostRect
 				;
 
-				this._isTouch = true;
 				ghostEl = target.cloneNode(true);
 
 				_css(ghostEl, 'top', target.offsetTop - parseInt(css.marginTop, 10));
@@ -279,7 +275,6 @@
 				this._loopId = setInterval(this._emulateDragOver, 150);
 			}
 			else {
-				this._isTouch = false;
 				dataTransfer.effectAllowed = 'move';
 				dataTransfer.setData('Text', target.textContent);
 
@@ -360,7 +355,7 @@
 				scrollTopFrom = container.getBoundingClientRect().top + this.options.scrollableContainerArea, // holder's top position
 				scrollBottomFrom = container.getBoundingClientRect().top + container.clientHeight - this.options.scrollableContainerArea - 60; // must subtract trash height (60px)
 
-			if (this._isTouch) {
+			if (_isTouch) {
 				// Scroll to bottom
 				if (touchEvt.clientY > scrollBottomFrom) {
 					if (container.scrollHeight == container.scrollTop + container.clientHeight) {
@@ -368,7 +363,7 @@
 					}
 					_scrollTo(container, 100, 200);
 					tapEvt.clientY -= 100;
-					_css(ghostEl, 'webkitTransform', 'translate3d(0,' + touchEvt.clientY - tapEvt.clientY + 'px,0)');
+					_css(ghostEl, 'webkitTransform', 'translate3d('+(touch.clientX-tapEvt.clientX)+'px,'+(touch.clientY-tapEvt.clientY)+'px,0)');
 
 				// Scroll to top
 				} else if (touchEvt.clientY < scrollTopFrom) {
@@ -377,7 +372,7 @@
 					}
 					_scrollTo(container, -100, 200);
 					tapEvt.clientY += 100;
-					_css(ghostEl, 'webkitTransform', 'translate3d(0,' + touchEvt.clientY - tapEvt.clientY + 'px,0)');
+					_css(ghostEl, 'webkitTransform', 'translate3d('+(touch.clientX-tapEvt.clientX)+'px,'+(touch.clientY-tapEvt.clientY)+'px,0)');
 				}
 			} else {
 				// Scroll to bottom
