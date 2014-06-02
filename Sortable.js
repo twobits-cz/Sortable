@@ -74,6 +74,7 @@
 		options.handle = options.handle || null;
 		options.draggable = options.draggable || el.children[0] && el.children[0].nodeName || (/[uo]l/i.test(el.nodeName) ? 'li' : '*');
 		options.ghostClass = options.ghostClass || 'sortable-ghost';
+		options.ghostInBottom = options.ghostInBottom || 5;
 
 		options.onAdd = _bind(this, options.onAdd || noop);
 		options.onUpdate = _bind(this, options.onUpdate || noop);
@@ -293,7 +294,7 @@
 					, target = _closest(evt.target, this.options.draggable, el)
 				;
 
-				if( el.children.length === 0 || el.children[0] === ghostEl || _checkExpandoEqual(target, dragEl.parentNode) || (el === evt.target) && _ghostInBottom(el, evt) ){
+				if( el.children.length === 0 || el.children[0] === ghostEl || _checkExpandoEqual(target, dragEl.parentNode) || (el === evt.target) && _ghostInBottom(el, evt, this.options.ghostInBottom) ){
 					el.appendChild(dragEl);
 				}
 				else if( target && target !== dragEl && (target.parentNode[expando] !== void 0) ){
@@ -546,9 +547,10 @@
 	}
 
 
-	function _ghostInBottom(el, evt){
+	function _ghostInBottom(el, evt, delta){
 		var last = el.lastElementChild.getBoundingClientRect();
-		return evt.clientY - (last.top + last.height) > 5; // min delta
+		console.log(delta);
+		return evt.clientY - (last.top + last.height) > delta; // min delta
 	}
 
 	function _checkExpandoEqual(elm1, elm2 ) {
