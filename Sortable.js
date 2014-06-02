@@ -549,7 +549,6 @@
 
 	function _ghostInBottom(el, evt, delta){
 		var last = el.lastElementChild.getBoundingClientRect();
-		console.log(delta);
 		return evt.clientY - (last.top + last.height) > delta; // min delta
 	}
 
