@@ -321,9 +321,8 @@
 					if( floating ){
 						after = (target.previousElementSibling === dragEl) && !isWide || (skew > .5) && isWide
 					} else {
-						after = false ;
-						// TH FIX
-						// (target.nextElementSibling !== dragEl) && !isLong || (skew > .5) && isLong;
+						after = (target.nextElementSibling !== dragEl) && !isLong || (skew > .5) && isLong;
+						//WAS FIXED BY TH TO after = false;
 					}
 
 					if( after && !nextSibling ){
