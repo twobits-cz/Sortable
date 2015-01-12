@@ -336,7 +336,7 @@
 					}
 				}
 
-				this._detectScroll(event);
+				this._detectScroll(evt);
 			}
 		},
 
