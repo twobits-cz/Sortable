@@ -341,6 +341,9 @@
 		},
 
 		_detectScroll: function (event){
+			if (this.options.onDrag) {
+				this.options.onDrag(event);
+			}
 			if (!this.options.scrollableContainer) {
 				return;
 			}
